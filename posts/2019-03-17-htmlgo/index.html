@@ -1,0 +1,209 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="x-ua-compatible" content="ie=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="description" content="Hi, I'm Julian - welcome to my personal website." />
+        <meta name="keywords" content="julian, vossen, software engineering, machine learning, deep learning, neural networks, app, development, developer, programming, webdesign, golang, python, pytorch, keras" />
+        <meta name="author" content="Julian Vossen" />
+
+        <!-- Facebook and Twitter integration -->
+        <meta property="og:title" content="Hi, I'm Julian" />
+        <meta property="og:image" content />
+        <meta property="og:url" content="https://julianvossen.de" />
+        <meta property="og:site_name" content="Hi, I'm Julian" />
+        <meta property="og:description" content="Hi, I'm Julian - welcome to my personal website." />
+        <meta name="twitter:title" content="Hi, I'm Julian" />
+        <meta name="twitter:image" content />
+        <meta name="twitter:url" content="https://julianvossen.de" />
+        <meta name="twitter:card" content />
+
+        <link rel="shortcut icon" type="image/x-icon" href="../../images/favicon.ico">
+
+        <title>Writing type-safe HTML in Go with htmlgo - julianvossen.de</title>
+        <link rel="stylesheet" href="../../css/default.css" />
+        <script defer src="https://use.fontawesome.com/releases/v5.8.1/js/all.js" integrity="sha384-g5uSoOSBd7KkhAMlnQILrecXvzst9TdC09/VM+pjDTCM+1il8RHz5fKANTFFb+gQ" crossorigin="anonymous">
+        </script>
+    </head>
+    <body>
+        <header>
+            <div class="logo">
+                <a href="../../"></a>
+            </div>
+            <nav>
+                <a href="https://github.com/julvo" target="_blank">
+                  <i class="fab fa-github"></i>
+                </a>
+                <a href="https://linkedin.com/in/julianvossen" target="_blank">
+                  <i class="fab fa-linkedin"></i>
+                </a>
+                <a href="https://soundcloud.com/inocs" target="_blank">
+                  <i class="fab fa-soundcloud"></i>
+                </a>
+            </nav>
+        </header>
+
+        <main role="main">
+            <article>
+    <h1>Writing type-safe HTML in Go with htmlgo</h1>
+    <section class="header">
+      <div class="row" style="align-items: center">
+        
+        <div class="column is-4" style="margin-bottom:8px">
+				<img src="../../images/htmlgo.jpg" style="height: 100%; width: 100%; object-fit: cover;">
+        </div>
+        
+        <div class="column is-8 is-first-mobile" style="margin-bottom:8px">
+          <i class="small-text" style="color: #444">
+             Posted on March 17, 2019
+             
+             <br class="is-hidden-mobile"> by Julian Vossen
+             
+          </i>
+
+           
+        </div>
+      </div>
+    </section>
+    <section>
+        <p>Recently, I’ve been working on a server-side-rendered web app written in Go. We are using the standard library package <code>html/template</code> for rendering HTML pages. <code>html/template</code> provides a brilliant escaping mechanism, which escapes data appropriately by looking at the context into which the data is rendered.</p>
+<p>Here is an example for this contextual escaping taken from the <a href="https://golang.org/pkg/html/template/#hdr-Contexts">html/template docs</a>, where the column on the left is the template and the column on the right is the result of inserting <code>&quot;O'Reilly: How are &lt;i&gt;you&lt;/i&gt;?&quot;</code> into <code>{{.}}</code>:</p>
+<pre class="golang"><code>{{.}}                            O'Reilly: How are &amp;lt;i&amp;gt;you&amp;lt;/i&amp;gt;?
+&lt;a title='{{.}}'&gt;                O&amp;#39;Reilly: How are you?
+&lt;a href=&quot;/{{.}}&quot;&gt;                O&amp;#39;Reilly: How are %3ci%3eyou%3c/i%3e?
+&lt;a href=&quot;?q={{.}}&quot;&gt;              O&amp;#39;Reilly%3a%20How%20are%3ci%3e...%3f
+&lt;a onx='f(&quot;{{.}}&quot;)'&gt;             O\x27Reilly: How are \x3ci\x3eyou...?</code></pre>
+<p>While this escaping and the simple API of <code>html/template</code> is great, as projects grow, the lack of type-safety can become problematic. Templates are not type-checked during compilation. This means that there is no guarantee that data accessed during the template execution actually exists. If it doesn’t exist, this will lead to runtime errors instead of errors during compilation. Therefore, the template user needs to know what data a template requires. This becomes hard to keep track of, especially, with nested templates. There is no way a template can define what data it requires so that this data could be checked during compilation.</p>
+<p>For type-safe templates there are solutions like <a href="https://github.com/valyala/quicktemplate">quicktemplate</a> which use their own templating language and code generation to generate Go code for templates. While this might work great (and fast) in many cases, I was looking for a way to write pages more in the style of single-file components in Vue, rather than separating views and controllers. Also, the special (and at times slightly verbose) syntax introduced by some of the compiled-template libraries can spark various degrees of enthusiasm.</p>
+<p>At this time I was toying around with writing a web app in Haskell. I really enjoyed using <a href="http://hackage.haskell.org/package/blaze-html">blaze-html</a> by <a href="https://jaspervdj.be">Jasper Van der Jeugt</a> which lets you write HTML by using Haskell functions to create HTML elements. Of course, one of the merits of <code>blaze-html</code> is its speed, but I simply liked the idea of writing HTML in a compiled language in the same file as the business logic. This made me think of how we could recreate this experience in Go and the idea for <a href="https://github.com/julvo/htmlgo">github.com/julvo/htmlgo</a> was born.</p>
+<p>Let’s first look at an example of creating a form with an email input and a submit button using <code>htmlgo</code>:</p>
+<pre class="golang"><code>// import . &quot;github.com/julvo/htmlgo&quot;
+// import a &quot;github.com/julvo/htmlgo/attributes&quot;
+
+form := 
+    Form_(
+        Input(Attr(a.Type_(&quot;email&quot;), a.Name_(&quot;email-input))),
+        Button(Attr(Type_(&quot;submit&quot;)),
+            Text_(&quot;Subscribe&quot;)))
+</code></pre>
+<p>This will result in the following HTML:</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode html"><code class="sourceCode html"><a class="sourceLine" id="cb3-1" title="1"><span class="kw">&lt;form&gt;</span></a>
+<a class="sourceLine" id="cb3-2" title="2">    <span class="kw">&lt;input</span><span class="ot"> type=</span><span class="st">&quot;email&quot;</span><span class="ot"> name=</span><span class="st">&quot;email-input&quot;</span><span class="kw">&gt;</span></a>
+<a class="sourceLine" id="cb3-3" title="3">    <span class="kw">&lt;button</span><span class="ot"> type=</span><span class="st">&quot;submit&quot;</span><span class="kw">&gt;</span></a>
+<a class="sourceLine" id="cb3-4" title="4">        Subscribe</a>
+<a class="sourceLine" id="cb3-5" title="5">    <span class="kw">&lt;/button&gt;</span></a>
+<a class="sourceLine" id="cb3-6" title="6"><span class="kw">&lt;/form&gt;</span></a></code></pre></div>
+<p>While most of the syntax may be obvious to you, you might be wondering what these underscore suffixes are for. For understanding this, let’s look at the two basic functions available for creating tags and attributes:</p>
+<ol type="1">
+<li><code>Tagname(attrs []a.Attribute, children ...HTML) HTML</code></li>
+<li><code>Attributename(data interface{}, templates ...string) a.Attribute</code></li>
+</ol>
+<p>In both cases, the underscore suffix omits the first argument, i.e. resulting in a tag without attributes, or an attribute without the data argument, respectively:</p>
+<ol start="3" type="1">
+<li><code>Tagname_(children ...HTML) HTML</code></li>
+<li><code>Attributename_(templates ...string) a.Attribute</code></li>
+</ol>
+<p>The function for creating attributes deserves more attention, as the arguments <code>data</code> and <code>templates</code> might be confusing. The idea behind using these two arguments is that you can use templating to create attributes by providing a template and the data that should be rendered into the template. Under the hood, this will use <code>html/template</code> and escape the input contextually. E.g. you could use <code>a.Href(ID, &quot;/details/{{.}}&quot;)</code> for an anchor element, whereby <code>ID</code> will be escaped securely. Note, as <code>templates</code> is a variadic argument, it can be omitted entirely, in which case <code>{{.}}</code> is used as the template. In many cases, the attribute values may be static. For static values, you could write <code>Type(nil, &quot;email&quot;)</code> or the unescaped and less verbose underscore-suffixed equivalent <code>Type_(&quot;email&quot;)</code>. A conservative rule of thumb is that you should never pass a variable into the underscore-suffixed functions, only string literals.</p>
+<p>For converting text to HTML, there is <code>Text(text interface{}) HTML</code> and the unescaped <code>Text_(text string) HTML</code>.</p>
+<p>A special case is the script tag <code>Script(attrs []a.Attribute, js JS) HTML</code> where is second argument is of type <code>JS</code>. You can create a <code>JS</code> by using <code>JavaScript(data interface{}, templates ...string) JS</code> and <code>JavaScript_(templates ...string) JS</code>, whereby the escaping behaves as it does for the attributes.</p>
+<p>Now knowing the basics, let’s see how we can wrap the form from the above example into a function to create a nicely reusable component, that would give us compile-time errors if we pass it the wrong data type.</p>
+<pre class="golang"><code>func SubscribeForm(user User) HTML {
+    return Form_(
+        Input(Attr(a.Type_(&quot;email&quot;), a.Name_(&quot;email-input), a.Value(user.Email))),
+        Button(Attr(Type_(&quot;submit&quot;)),
+            Text_(&quot;Subscribe&quot;)))
+}</code></pre>
+<p>If we were to rename the <code>User.Email</code> field to <code>User.EmailAddr</code>, we would get a compilation error, whereas using the <code>html/template</code> version below would result in a runtime error while executing the template:</p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode html"><code class="sourceCode html"><a class="sourceLine" id="cb5-1" title="1">{{ define &quot;subscribe_form&quot; }}</a>
+<a class="sourceLine" id="cb5-2" title="2"><span class="kw">&lt;form&gt;</span></a>
+<a class="sourceLine" id="cb5-3" title="3">    <span class="kw">&lt;input</span><span class="ot"> type=</span><span class="st">&quot;email&quot;</span><span class="ot"> name=</span><span class="st">&quot;email-input&quot;</span><span class="ot"> value=</span><span class="st">{{User.Email}}</span><span class="kw">&gt;</span></a>
+<a class="sourceLine" id="cb5-4" title="4">    <span class="kw">&lt;button</span><span class="ot"> type=</span><span class="st">&quot;submit&quot;</span><span class="kw">&gt;</span></a>
+<a class="sourceLine" id="cb5-5" title="5">        Subscribe</a>
+<a class="sourceLine" id="cb5-6" title="6">    <span class="kw">&lt;/button&gt;</span></a>
+<a class="sourceLine" id="cb5-7" title="7"><span class="kw">&lt;/form&gt;</span></a>
+<a class="sourceLine" id="cb5-8" title="8">{{ end }}</a></code></pre></div>
+<p>In this case, the user of the <code>subscribe_form</code> template would need to scan the templates for occurences of the type to be changed.</p>
+<p>Finally, here is a full example of using <code>htmlgo</code> to actually render a page:</p>
+<pre class="golang"><code>package main
+
+import (
+  &quot;log&quot;
+  &quot;net/http&quot;
+  
+  . &quot;github.com/julvo/htmlgo&quot;
+  a &quot;github.com/julvo/htmlgo/attributes&quot;
+)
+
+func main() {
+  http.HandleFunc(&quot;/&quot;, indexHandler)
+  log.Fatal(http.ListenAndServe(&quot;:8080&quot;, nil))
+}
+
+func indexHandler(w http.ResponseWriter, req *http.Request) {
+  fruit := []string{&quot;Apple&quot;, &quot;Banana&quot;, &quot;Orange&quot;}
+
+  fruitListItems := HTML(&quot;&quot;)
+  for _, f := range fruit {
+    fruitListItems += Li_(Text(f))
+  }
+
+  content := 
+    navbar(false) + 
+    Ul_(fruitListItems) + 
+    footer()
+
+  WriteTo(w, page(&quot;Home&quot;, content))
+}
+
+func page(title string, content HTML) HTML {
+    p :=
+      Html5_(
+        Head_(
+	  Title_(Text(title)),
+          Meta(Attr(a.Charset_(&quot;utf-8&quot;))),
+          Meta(Attr(a.Name_(&quot;viewport&quot;), a.Content_(&quot;width=device-width&quot;), a.InitialScale_(&quot;1&quot;))),
+          Link(Attr(a.Rel_(&quot;stylesheet&quot;), a.Href_(&quot;/static/css/main.min.css&quot;)))),
+        Body_(
+          content,
+          Script(Attr(a.Src_(&quot;/static/js/main.min.js&quot;)), JS{})))
+
+    return p
+}
+
+func navbar(isLoggedIn bool) HTML {
+  var navItems HTML
+  if !isLoggedIn {
+    navItems = A(Attr(a.Href_(&quot;/login&quot;)), Text_(&quot;Login&quot;))
+  }
+
+  nav := 
+    Nav_(
+      Div_(navItems),
+      Hr_())
+
+  return nav
+}
+
+func footer() HTML {
+  return Footer_(
+    Hr_(),
+    Text_(&quot;&amp;copy Acme Ltd, 2019&quot;))
+}</code></pre>
+<p>As of now, <code>htmlgo</code> is safe to use as it is based on <code>html/template</code>’s contextual escaping. It supports for all HTML5 tags and attributes. However, at this point it is not optimised for performance and will likely be significantly slower than <code>html/template</code>.</p>
+<p>Feel free to play around with <code>htmlgo</code> and raise issues on <a href="https://github.com/julvo/htmlgo">Github</a>.</p>
+    </section>
+</article>
+
+        </main>
+
+        <footer>
+          <span style="float: left;">
+            &copy Julian Vossen
+          </span>
+          <span style="float:right;">
+            Site generated by <a href="http://jaspervdj.be/hakyll">Hakyll</a>
+          </span>
+        </footer>
+    </body>
+</html>

@@ -1,0 +1,222 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="x-ua-compatible" content="ie=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="keywords" content="julian, vossen, software engineering, machine learning, deep learning, neural networks, app, development, developer, programming, webdesign, golang, python, pytorch, keras" />
+        <meta name="author" content="Julian Vossen" />
+
+        <!-- Facebook and Twitter integration -->
+        <meta property="og:title" content="Using Deep Learning to isolate vocals from songs" />
+        
+        <meta property="og:image" content="https://julianvossen.de/images/vocalstripper/vocalstripper.jpg" />
+        <meta name="twitter:image" content="https://julianvossen.de/images/vocalstripper/vocalstripper.jpg" />
+        
+        <meta property="og:site_name" content="julianvossen.de" />
+        
+        <meta name="description" content="A short post on isolating vocals from songs by training a WaveNet-like model on raw audio" />
+        <meta property="og:description" content="A short post on isolating vocals from songs by training a WaveNet-like model on raw audio" />
+        
+        <meta name="twitter:title" content="Using Deep Learning to isolate vocals from songs" />
+        <meta name="twitter:card" content />
+
+        <link rel="shortcut icon" type="image/x-icon" href="../../images/favicon.ico">
+
+        <title>Using Deep Learning to isolate vocals from songs - julianvossen.de</title>
+        <link rel="stylesheet" href="../../css/default.css" />
+        <script defer src="https://use.fontawesome.com/releases/v5.8.1/js/all.js" integrity="sha384-g5uSoOSBd7KkhAMlnQILrecXvzst9TdC09/VM+pjDTCM+1il8RHz5fKANTFFb+gQ" crossorigin="anonymous">
+        </script>
+    </head>
+    <body>
+        <header>
+            <div class="logo">
+                <a href="../../"></a>
+            </div>
+            <nav>
+                <a href="https://github.com/julvo" target="_blank">
+                  <i class="fab fa-github"></i>
+                </a>
+                <a href="https://linkedin.com/in/julianvossen" target="_blank">
+                  <i class="fab fa-linkedin"></i>
+                </a>
+                <a href="https://soundcloud.com/inocs" target="_blank">
+                  <i class="fab fa-soundcloud"></i>
+                </a>
+            </nav>
+        </header>
+
+        <main role="main">
+            <article>
+    <h1>Using Deep Learning to isolate vocals from songs</h1>
+    <section class="header">
+      <div class="row" style="align-items: center">
+        
+        <div class="column is-4" style="margin-bottom:8px">
+				<img src="../../images/vocalstripper/vocalstripper.jpg" style="height: 100%; width: 100%; object-fit: cover;">
+        </div>
+        
+        <div class="column is-8 is-first-mobile" style="margin-bottom:8px">
+           
+           <p>
+            <i>
+             A short post on isolating vocals from songs by training a WaveNet-like model on raw audio
+            </i>
+           </p>
+           
+          <i class="small-text" style="color: #444">
+             Posted on February 10, 2019
+             
+             <br class="is-hidden-mobile"> by Julian Vossen
+             
+
+          </i>
+        </div>
+      </div>
+    </section>
+    <section>
+        <p>Splitting audio tracks into individual audio sources, such as vocals or instruments, is also known as source separation. This problem has been approached with Deep Learning by first transforming the audio signal from the time domain into the frequency domain, applying a 2D convolutional network to mask the frequencies and, finally, transforming the masked frequencies back into the time domain.</p>
+<p>If you are now wondering what time domain and frequency domain are, here is a short explanation: In the time domain, an audio signal is a one-dimensional vector, where each element corresponds to the amplitude of the signal at a given time. Typical audio signals are sampled at around 44 thousand samples per second. You can think of the amplitude of an audio signal as the displacement of a speaker membrane playing the sound. We can transform this time series of samples into the frequency domain, by chopping the series into small batches and determining for each of the batches, sine waves of which frequencies we would need to overlay to obtain the same pattern. A signal in the frequency domain is represented as a 2D frequency-over-time matrix. Each element of this matrix determines, how much of a sine wave of this frequency is in the signal at a given time step. For a more mathematical description, have a look at <a href="https://en.wikipedia.org/wiki/Fourier_transform">Fourier transforms</a>.</p>
+<h2 id="processing-raw-audio">Processing Raw Audio</h2>
+<p>Starting with the introduction of <a href="https://arxiv.org/pdf/1609.03499.pdf">WaveNet</a>, the trend in speech generation seems to be to generate raw audio, i.e. a time domain signal. Therefore, I was wondering if we could approach source separation similarly, by simply feeding a 1D time series of samples into a model and train it to output the 1D series of samples for the vocal signal.</p>
+<p>The challenge, when working with raw audio, is the vast number of samples per second. The signal of a short drum hit of 0.5 seconds spans across 22 thousand samples in a 44.1KHz audio signal. Therefore, a model identifying this entire drum hit would ideally be able to combine the information from 22 thousand input samples. This is a large context to consider for a neural network. The spacial extend of inputs (e.g. the number of samples) used to generate an output, is also called receptive field. WaveNet uses <strong>dilated convolutions</strong> to increase the receptive field, while preserving the spacial resolution. Strided convolution (typical for classification) uses dense kernel matrices, but skips convolutions to increase the receptive field, resulting in decreased spacial resolution. Dilated convolutions, on the other hand, use larger but sparse kernel matrices to increase the receptive field while preserving the spacial resolution. The difference is shown in these animation borrowed from <a href="https://github.com/vdumoulin">vdumoulin</a>:</p>
+<div class="row-mobile">
+<div class="column is-6-mobile">
+<img src="../../images/vocalstripper/stride.gif" style="width: 60%; margin-left: 20%;" />
+<p style="text-align: center">
+<em>Strided convolution</em>
+</p>
+</div>
+<div class="column is-6-mobile">
+<img src="../../images/vocalstripper/dilation.gif" style="width: 60%; margin-left: 20%;" />
+<p style="text-align: center">
+<em>Dilated convolution</em>
+</p>
+</div>
+</div>
+<p>Apart from the repeated blocks of layers of dilated convolutions, key features of the WaveNet architecture include:</p>
+<ul>
+<li><strong>Skip connections</strong> and <strong>residual connections</strong>, to allow direct information and gradient flow between the output and early layers in the network</li>
+<li><strong>Gated activations</strong>: Single layers with single activations are replaced by two parallel layers, one with a <em>tanh</em> activation and the other with a <em>sigmoid</em>. The output of both activations is multiplied to obtain the final activation. My intuitive explanation of the motivation behind this is to factorise a layer into a <em>tanh</em> layer which learns what a feature’s impact would be if it had any impact and a <em>sigmoid</em> layer which learns if a feature has an impact, without learning what the impact would be. Similar to LSTMs or GRUs, the <em>sigmoid</em> layer effectively helpts to protect the information in the <em>tanh</em> layer.</li>
+<li><strong>Causal convolutions</strong>: Normal convolutional kernels are symmetric meaning the output of a kernel is computed from inputs to all sides of the output. In causal convolutions, the kernels are masked such that the output depends only on inputs on one side of it. This way, WaveNet can generate new samples from past samples, without peeking into the future.</li>
+</ul>
+<p>For the source separation model, we use 3 blocks of 10 convolutional layers each, with dilation rates of [1, 2, 4, …, 512]. We use residual connections, skip connections and gated activations. However, we don’t need causal convolutions, as the complete source signal is given before the model evaluation and we would like the model to be able to exploit context to both sides of the output. The model output is the sum of outputs of all the skip layers subject to a final convolutional layer to obtain the 2 output channels needed for stereo audio. We use a linear activation in the final layer as this should result in better gradients when combined with the MAE loss between the target vocal signal and the model output. Here is the implementation of the model in Keras:</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode python"><code class="sourceCode python"><a class="sourceLine" id="cb1-1" title="1"><span class="im">from</span> keras.models <span class="im">import</span> Model</a>
+<a class="sourceLine" id="cb1-2" title="2"><span class="im">from</span> keras.layers <span class="im">import</span> Input, Conv1D, Activation, Add, Multiply</a>
+<a class="sourceLine" id="cb1-3" title="3"></a>
+<a class="sourceLine" id="cb1-4" title="4"><span class="kw">def</span> VocNet(nb_filters<span class="op">=</span><span class="dv">128</span>, nb_skip_filters<span class="op">=</span><span class="dv">192</span>, </a>
+<a class="sourceLine" id="cb1-5" title="5">           nb_layers<span class="op">=</span><span class="dv">30</span>, nb_layers_per_stage<span class="op">=</span><span class="dv">10</span>):</a>
+<a class="sourceLine" id="cb1-6" title="6">    inputs <span class="op">=</span> Input((<span class="va">None</span>, <span class="dv">2</span>))</a>
+<a class="sourceLine" id="cb1-7" title="7">    h <span class="op">=</span> Conv1D(nb_filters, <span class="dv">1</span>, activation<span class="op">=</span><span class="st">'relu'</span>, padding<span class="op">=</span><span class="st">'same'</span>)(inputs)</a>
+<a class="sourceLine" id="cb1-8" title="8">    </a>
+<a class="sourceLine" id="cb1-9" title="9">    skips <span class="op">=</span> []</a>
+<a class="sourceLine" id="cb1-10" title="10">    <span class="cf">for</span> lay <span class="kw">in</span> <span class="bu">range</span>(nb_layers):</a>
+<a class="sourceLine" id="cb1-11" title="11">        dil_rate <span class="op">=</span> <span class="dv">2</span> <span class="op">**</span> (lay <span class="op">%</span> nb_layers_per_stage)</a>
+<a class="sourceLine" id="cb1-12" title="12"></a>
+<a class="sourceLine" id="cb1-13" title="13">        tanh <span class="op">=</span> Conv1D(nb_filters, <span class="dv">2</span>, dilation_rate<span class="op">=</span>dil_rate, </a>
+<a class="sourceLine" id="cb1-14" title="14">                      activation<span class="op">=</span><span class="st">'tanh'</span>, padding<span class="op">=</span><span class="st">'same'</span>)(h)</a>
+<a class="sourceLine" id="cb1-15" title="15">        sigm <span class="op">=</span> Conv1D(nb_filters, <span class="dv">2</span>, dilation_rate<span class="op">=</span>dil_rate, </a>
+<a class="sourceLine" id="cb1-16" title="16">                      activation<span class="op">=</span><span class="st">'sigmoid'</span>, padding<span class="op">=</span><span class="st">'same'</span>)(h)</a>
+<a class="sourceLine" id="cb1-17" title="17"></a>
+<a class="sourceLine" id="cb1-18" title="18">        gated <span class="op">=</span> Multiply()([tanh, sigm])</a>
+<a class="sourceLine" id="cb1-19" title="19">        </a>
+<a class="sourceLine" id="cb1-20" title="20">        residual <span class="op">=</span> Conv1D(nb_filters, <span class="dv">1</span>, activation<span class="op">=</span><span class="st">'relu'</span>, padding<span class="op">=</span><span class="st">'same'</span>)(gated)</a>
+<a class="sourceLine" id="cb1-21" title="21">        h <span class="op">=</span> Add()([h, residual])</a>
+<a class="sourceLine" id="cb1-22" title="22"></a>
+<a class="sourceLine" id="cb1-23" title="23">        skip <span class="op">=</span> Conv1D(nb_skip_filters, <span class="dv">1</span>, activation<span class="op">=</span><span class="st">'relu'</span>, padding<span class="op">=</span><span class="st">'same'</span>)(gated)</a>
+<a class="sourceLine" id="cb1-24" title="24">        skips.append(skip)</a>
+<a class="sourceLine" id="cb1-25" title="25">        </a>
+<a class="sourceLine" id="cb1-26" title="26">    out <span class="op">=</span> Add()(skips)</a>
+<a class="sourceLine" id="cb1-27" title="27">    out <span class="op">=</span> Conv1D(<span class="dv">2</span>, <span class="dv">1</span>, activation<span class="op">=</span><span class="st">'linear'</span>, padding<span class="op">=</span><span class="st">'same'</span>)(out)</a>
+<a class="sourceLine" id="cb1-28" title="28">    </a>
+<a class="sourceLine" id="cb1-29" title="29">    <span class="cf">return</span> Model(inputs<span class="op">=</span>[inputs], outputs<span class="op">=</span>[out])</a></code></pre></div>
+<p>The training data is gathered by downloading instrumental music and acapellas from YouTube. We can generate arbitrarily many training examples by overlaying random snippets of instrumentals and acapellas. Note that we do not require the instrumentals and vocals to stem from the same song, which makes creating a large data set much easier.</p>
+<h2 id="results">Results</h2>
+<p>Here are a few model outputs for songs where neither the acapella nor the instrumental was part of the training set. For each of the examples, the first audio file is the original song and the second file is the model output.</p>
+<h4 id="adele---skyfall">Adele - Skyfall</h4>
+<div>
+<audio controls>
+<source src="../../images/vocalstripper/skyfall.mp3" type="audio/mpeg"></source>
+</audio>
+</div>
+<div>
+<audio controls>
+<source src="../../images/vocalstripper/skyfall_acapella.mp3" type="audio/mpeg"></source>
+</audio>
+</div>
+<h4 id="portugal.-the-man---feel-it-still">Portugal. The Man - Feel It Still</h4>
+<div>
+<audio controls>
+<source src="../../images/vocalstripper/feel_it_still.mp3" type="audio/mpeg"></source>
+</audio>
+</div>
+<div>
+<audio controls>
+<source src="../../images/vocalstripper/feel_it_still_acapella.mp3" type="audio/mpeg"></source>
+</audio>
+</div>
+<h4 id="pharrell-williams---happy">Pharrell Williams - Happy</h4>
+<div>
+<audio controls>
+<source src="../../images/vocalstripper/happy.mp3" type="audio/mpeg"></source>
+</audio>
+</div>
+<div>
+<audio controls>
+<source src="../../images/vocalstripper/happy_acapella.mp3" type="audio/mpeg"></source>
+</audio>
+</div>
+<h4 id="red-hot-chili-peppers---otherside">Red Hot Chili Peppers - Otherside</h4>
+<div>
+<audio controls>
+<source src="../../images/vocalstripper/otherside.mp3" type="audio/mpeg"></source>
+</audio>
+</div>
+<div>
+<audio controls>
+<source src="../../images/vocalstripper/otherside_acapella.mp3" type="audio/mpeg"></source>
+</audio>
+</div>
+<p>The results are clearly not good enough to be practically useful. However, these results also show that performing source separation on raw audio signals is viable. Interestingly, the kind of error that the model makes, sounds qualitatively different from the kind of error that seems typical for source separation in the frequency domain. Often, the output of frequency-domain models has a flanger-like sound to it. Therefore, it could be interesting to combine both approaches.</p>
+<h2 id="potential-for-improvement-more-context-perceptual-loss">Potential for improvement: more context, perceptual loss</h2>
+<p>I suspect there are two main potentials for improving this raw audio approach to source separation:</p>
+<ul>
+<li><p>The receptive field of the above model is 3 x 512 = 1536 samples or 0.035s at a sample rate of 44.1KHz. This feels like quite little information for telling apart vocals from instrumentals. For increasing the context, we could use a model with more layers and higher dilation rates or introduce a form of global context. The global context could be a compact vector representation of the whole song. The source separation network would then be conditioned on this global representation.</p></li>
+<li><p>In this example, we used the MAE loss function. I imagine that an output with a low MAE to the target waveform is not necessarily an output which sounds good to us. E.g. if we imagine a wave being offset by a constant distance over time, it might sound better to us then a wave wiggling around the target with the same distance, even though the MAE would be the same. Therefore, a GAN architecture with a perceptual loss using a discriminator network, might yield much better results.</p></li>
+</ul>
+<p><br></p>
+    </section>
+    <section>
+        <div id="disqus_thread"></div>
+<script>
+
+/**
+*  RECOMMENDED CONFIGURATION VARIABLES: EDIT AND UNCOMMENT THE SECTION BELOW TO INSERT DYNAMIC VALUES FROM YOUR PLATFORM OR CMS.
+*  LEARN WHY DEFINING THESE VARIABLES IS IMPORTANT: https://disqus.com/admin/universalcode/#configuration-variables*/
+var disqus_config = function () {
+this.page.url = "https://julianvossen.de/posts/2019-02-10-vocalstripper/index.html";  // Replace PAGE_URL with your page's canonical URL variable
+this.page.identifier = "/posts/2019-02-10-vocalstripper/index.html"; // Replace PAGE_IDENTIFIER with your page's unique identifier variable
+};
+(function() { // DON'T EDIT BELOW THIS LINE
+var d = document, s = d.createElement('script');
+s.src = 'https://julianvossen-de.disqus.com/embed.js';
+s.setAttribute('data-timestamp', +new Date());
+(d.head || d.body).appendChild(s);
+})();
+</script>
+<noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+    </section>
+</article>
+
+        </main>
+
+        <footer>
+          <span style="float: left;">
+            &copy Julian Vossen
+          </span>
+          <span style="float:right;">
+            Site generated by <a href="http://jaspervdj.be/hakyll">Hakyll</a>
+          </span>
+        </footer>
+    </body>
+</html>

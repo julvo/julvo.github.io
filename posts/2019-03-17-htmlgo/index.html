@@ -57,21 +57,21 @@
         </div>
         
         <div class="column is-8 is-first-mobile" style="margin-bottom:8px">
+           
           <i class="small-text" style="color: #444">
              Posted on March 17, 2019
              
              <br class="is-hidden-mobile"> by Julian Vossen
              
-          </i>
 
-           
+          </i>
         </div>
       </div>
     </section>
     <section>
         <p>Recently, I’ve been working on a server-side-rendered web app written in Go. We are using the standard library package <code>html/template</code> for rendering HTML pages. <code>html/template</code> provides a brilliant escaping mechanism, which escapes data appropriately by looking at the context into which the data is rendered.</p>
 <p>Here is an example for this contextual escaping taken from the <a href="https://golang.org/pkg/html/template/#hdr-Contexts">html/template docs</a>, where the column on the left is the template and the column on the right is the result of inserting <code>&quot;O'Reilly: How are &lt;i&gt;you&lt;/i&gt;?&quot;</code> into <code>{{.}}</code>:</p>
-<pre class="golang"><code>{{.}}                            O'Reilly: How are &amp;lt;i&amp;gt;you&amp;lt;/i&amp;gt;?
+<pre><code>{{.}}                            O'Reilly: How are &amp;lt;i&amp;gt;you&amp;lt;/i&amp;gt;?
 &lt;a title='{{.}}'&gt;                O&amp;#39;Reilly: How are you?
 &lt;a href=&quot;/{{.}}&quot;&gt;                O&amp;#39;Reilly: How are %3ci%3eyou%3c/i%3e?
 &lt;a href=&quot;?q={{.}}&quot;&gt;              O&amp;#39;Reilly%3a%20How%20are%3ci%3e...%3f
@@ -80,15 +80,14 @@
 <p>For type-safe templates there are solutions like <a href="https://github.com/valyala/quicktemplate">quicktemplate</a> which use their own templating language and code generation to generate Go code for templates. While this might work great (and fast) in many cases, I was looking for a way to write pages more in the style of single-file components in Vue, rather than separating views and controllers. Also, the special (and at times slightly verbose) syntax introduced by some of the compiled-template libraries can spark various degrees of enthusiasm.</p>
 <p>At this time I was toying around with writing a web app in Haskell. I really enjoyed using <a href="http://hackage.haskell.org/package/blaze-html">blaze-html</a> by <a href="https://jaspervdj.be">Jasper Van der Jeugt</a> which lets you write HTML by using Haskell functions to create HTML elements. Of course, one of the merits of <code>blaze-html</code> is its speed, but I simply liked the idea of writing HTML in a compiled language in the same file as the business logic. This made me think of how we could recreate this experience in Go and the idea for <a href="https://github.com/julvo/htmlgo">github.com/julvo/htmlgo</a> was born.</p>
 <p>Let’s first look at an example of creating a form with an email input and a submit button using <code>htmlgo</code>:</p>
-<pre class="golang"><code>// import . &quot;github.com/julvo/htmlgo&quot;
-// import a &quot;github.com/julvo/htmlgo/attributes&quot;
-
-form := 
-    Form_(
-        Input(Attr(a.Type_(&quot;email&quot;), a.Name_(&quot;email-input))),
-        Button(Attr(Type_(&quot;submit&quot;)),
-            Text_(&quot;Subscribe&quot;)))
-</code></pre>
+<div class="sourceCode" id="cb2"><pre class="sourceCode go"><code class="sourceCode go"><a class="sourceLine" id="cb2-1" title="1"><span class="co">// import . &quot;github.com/julvo/htmlgo&quot;</span></a>
+<a class="sourceLine" id="cb2-2" title="2"><span class="co">// import a &quot;github.com/julvo/htmlgo/attributes&quot;</span></a>
+<a class="sourceLine" id="cb2-3" title="3"></a>
+<a class="sourceLine" id="cb2-4" title="4">form := </a>
+<a class="sourceLine" id="cb2-5" title="5">    Form_(</a>
+<a class="sourceLine" id="cb2-6" title="6">        Input(Attr(a.Type_(<span class="st">&quot;email&quot;</span>), a.Name_(<span class="st">&quot;email-input))),</span></a>
+<a class="sourceLine" id="cb2-7" title="7">        Button(Attr(Type_(<span class="st">&quot;submit&quot;</span>)),</a>
+<a class="sourceLine" id="cb2-8" title="8">            Text_(<span class="st">&quot;Subscribe&quot;</span>)))</a></code></pre></div>
 <p>This will result in the following HTML:</p>
 <div class="sourceCode" id="cb3"><pre class="sourceCode html"><code class="sourceCode html"><a class="sourceLine" id="cb3-1" title="1"><span class="kw">&lt;form&gt;</span></a>
 <a class="sourceLine" id="cb3-2" title="2">    <span class="kw">&lt;input</span><span class="ot"> type=</span><span class="st">&quot;email&quot;</span><span class="ot"> name=</span><span class="st">&quot;email-input&quot;</span><span class="kw">&gt;</span></a>
@@ -110,12 +109,12 @@ form :=
 <p>For converting text to HTML, there is <code>Text(text interface{}) HTML</code> and the unescaped <code>Text_(text string) HTML</code>.</p>
 <p>A special case is the script tag <code>Script(attrs []a.Attribute, js JS) HTML</code> where is second argument is of type <code>JS</code>. You can create a <code>JS</code> by using <code>JavaScript(data interface{}, templates ...string) JS</code> and <code>JavaScript_(templates ...string) JS</code>, whereby the escaping behaves as it does for the attributes.</p>
 <p>Now knowing the basics, let’s see how we can wrap the form from the above example into a function to create a nicely reusable component, that would give us compile-time errors if we pass it the wrong data type.</p>
-<pre class="golang"><code>func SubscribeForm(user User) HTML {
-    return Form_(
-        Input(Attr(a.Type_(&quot;email&quot;), a.Name_(&quot;email-input), a.Value(user.Email))),
-        Button(Attr(Type_(&quot;submit&quot;)),
-            Text_(&quot;Subscribe&quot;)))
-}</code></pre>
+<div class="sourceCode" id="cb4"><pre class="sourceCode go"><code class="sourceCode go"><a class="sourceLine" id="cb4-1" title="1"><span class="kw">func</span> SubscribeForm(user User) HTML {</a>
+<a class="sourceLine" id="cb4-2" title="2">    <span class="kw">return</span> Form_(</a>
+<a class="sourceLine" id="cb4-3" title="3">        Input(Attr(a.Type_(<span class="st">&quot;email&quot;</span>), a.Name_(<span class="st">&quot;email-input), a.Value(user.Email))),</span></a>
+<a class="sourceLine" id="cb4-4" title="4">        Button(Attr(Type_(<span class="st">&quot;submit&quot;</span>)),</a>
+<a class="sourceLine" id="cb4-5" title="5">            Text_(<span class="st">&quot;Subscribe&quot;</span>)))</a>
+<a class="sourceLine" id="cb4-6" title="6">}</a></code></pre></div>
 <p>If we were to rename the <code>User.Email</code> field to <code>User.EmailAddr</code>, we would get a compilation error, whereas using the <code>html/template</code> version below would result in a runtime error while executing the template:</p>
 <div class="sourceCode" id="cb5"><pre class="sourceCode html"><code class="sourceCode html"><a class="sourceLine" id="cb5-1" title="1">{{ define &quot;subscribe_form&quot; }}</a>
 <a class="sourceLine" id="cb5-2" title="2"><span class="kw">&lt;form&gt;</span></a>
@@ -125,73 +124,73 @@ form :=
 <a class="sourceLine" id="cb5-6" title="6">    <span class="kw">&lt;/button&gt;</span></a>
 <a class="sourceLine" id="cb5-7" title="7"><span class="kw">&lt;/form&gt;</span></a>
 <a class="sourceLine" id="cb5-8" title="8">{{ end }}</a></code></pre></div>
-<p>In this case, the user of the <code>subscribe_form</code> template would need to scan the templates for occurences of the type to be changed.</p>
+<p>In this case, the user of the <code>subscribe_form</code> template would need to scan the templates for occurrences of the type to be changed.</p>
 <p>Finally, here is a full example of using <code>htmlgo</code> to actually render a page:</p>
-<pre class="golang"><code>package main
-
-import (
-  &quot;log&quot;
-  &quot;net/http&quot;
-  
-  . &quot;github.com/julvo/htmlgo&quot;
-  a &quot;github.com/julvo/htmlgo/attributes&quot;
-)
-
-func main() {
-  http.HandleFunc(&quot;/&quot;, indexHandler)
-  log.Fatal(http.ListenAndServe(&quot;:8080&quot;, nil))
-}
-
-func indexHandler(w http.ResponseWriter, req *http.Request) {
-  fruit := []string{&quot;Apple&quot;, &quot;Banana&quot;, &quot;Orange&quot;}
-
-  fruitListItems := HTML(&quot;&quot;)
-  for _, f := range fruit {
-    fruitListItems += Li_(Text(f))
-  }
-
-  content := 
-    navbar(false) + 
-    Ul_(fruitListItems) + 
-    footer()
-
-  WriteTo(w, page(&quot;Home&quot;, content))
-}
-
-func page(title string, content HTML) HTML {
-    p :=
-      Html5_(
-        Head_(
-	  Title_(Text(title)),
-          Meta(Attr(a.Charset_(&quot;utf-8&quot;))),
-          Meta(Attr(a.Name_(&quot;viewport&quot;), a.Content_(&quot;width=device-width&quot;), a.InitialScale_(&quot;1&quot;))),
-          Link(Attr(a.Rel_(&quot;stylesheet&quot;), a.Href_(&quot;/static/css/main.min.css&quot;)))),
-        Body_(
-          content,
-          Script(Attr(a.Src_(&quot;/static/js/main.min.js&quot;)), JS{})))
-
-    return p
-}
-
-func navbar(isLoggedIn bool) HTML {
-  var navItems HTML
-  if !isLoggedIn {
-    navItems = A(Attr(a.Href_(&quot;/login&quot;)), Text_(&quot;Login&quot;))
-  }
-
-  nav := 
-    Nav_(
-      Div_(navItems),
-      Hr_())
-
-  return nav
-}
-
-func footer() HTML {
-  return Footer_(
-    Hr_(),
-    Text_(&quot;&amp;copy Acme Ltd, 2019&quot;))
-}</code></pre>
+<div class="sourceCode" id="cb6"><pre class="sourceCode go"><code class="sourceCode go"><a class="sourceLine" id="cb6-1" title="1"><span class="kw">package</span> main</a>
+<a class="sourceLine" id="cb6-2" title="2"></a>
+<a class="sourceLine" id="cb6-3" title="3"><span class="kw">import</span> (</a>
+<a class="sourceLine" id="cb6-4" title="4">  <span class="st">&quot;log&quot;</span></a>
+<a class="sourceLine" id="cb6-5" title="5">  <span class="st">&quot;net/http&quot;</span></a>
+<a class="sourceLine" id="cb6-6" title="6">  </a>
+<a class="sourceLine" id="cb6-7" title="7">  . <span class="st">&quot;github.com/julvo/htmlgo&quot;</span></a>
+<a class="sourceLine" id="cb6-8" title="8">  a <span class="st">&quot;github.com/julvo/htmlgo/attributes&quot;</span></a>
+<a class="sourceLine" id="cb6-9" title="9">)</a>
+<a class="sourceLine" id="cb6-10" title="10"></a>
+<a class="sourceLine" id="cb6-11" title="11"><span class="kw">func</span> main() {</a>
+<a class="sourceLine" id="cb6-12" title="12">  http.HandleFunc(<span class="st">&quot;/&quot;</span>, indexHandler)</a>
+<a class="sourceLine" id="cb6-13" title="13">  log.Fatal(http.ListenAndServe(<span class="st">&quot;:8080&quot;</span>, <span class="ot">nil</span>))</a>
+<a class="sourceLine" id="cb6-14" title="14">}</a>
+<a class="sourceLine" id="cb6-15" title="15"></a>
+<a class="sourceLine" id="cb6-16" title="16"><span class="kw">func</span> indexHandler(w http.ResponseWriter, req *http.Request) {</a>
+<a class="sourceLine" id="cb6-17" title="17">  fruit := []<span class="dt">string</span>{<span class="st">&quot;Apple&quot;</span>, <span class="st">&quot;Banana&quot;</span>, <span class="st">&quot;Orange&quot;</span>}</a>
+<a class="sourceLine" id="cb6-18" title="18"></a>
+<a class="sourceLine" id="cb6-19" title="19">  fruitListItems := HTML(<span class="st">&quot;&quot;</span>)</a>
+<a class="sourceLine" id="cb6-20" title="20">  <span class="kw">for</span> _, f := <span class="kw">range</span> fruit {</a>
+<a class="sourceLine" id="cb6-21" title="21">    fruitListItems += Li_(Text(f))</a>
+<a class="sourceLine" id="cb6-22" title="22">  }</a>
+<a class="sourceLine" id="cb6-23" title="23"></a>
+<a class="sourceLine" id="cb6-24" title="24">  content := </a>
+<a class="sourceLine" id="cb6-25" title="25">    navbar(<span class="ot">false</span>) + </a>
+<a class="sourceLine" id="cb6-26" title="26">    Ul_(fruitListItems) + </a>
+<a class="sourceLine" id="cb6-27" title="27">    footer()</a>
+<a class="sourceLine" id="cb6-28" title="28"></a>
+<a class="sourceLine" id="cb6-29" title="29">  WriteTo(w, page(<span class="st">&quot;Home&quot;</span>, content))</a>
+<a class="sourceLine" id="cb6-30" title="30">}</a>
+<a class="sourceLine" id="cb6-31" title="31"></a>
+<a class="sourceLine" id="cb6-32" title="32"><span class="kw">func</span> page(title <span class="dt">string</span>, content HTML) HTML {</a>
+<a class="sourceLine" id="cb6-33" title="33">    p :=</a>
+<a class="sourceLine" id="cb6-34" title="34">      Html5_(</a>
+<a class="sourceLine" id="cb6-35" title="35">        Head_(</a>
+<a class="sourceLine" id="cb6-36" title="36">	  Title_(Text(title)),</a>
+<a class="sourceLine" id="cb6-37" title="37">          Meta(Attr(a.Charset_(<span class="st">&quot;utf-8&quot;</span>))),</a>
+<a class="sourceLine" id="cb6-38" title="38">          Meta(Attr(a.Name_(<span class="st">&quot;viewport&quot;</span>), a.Content_(<span class="st">&quot;width=device-width&quot;</span>), a.InitialScale_(<span class="st">&quot;1&quot;</span>))),</a>
+<a class="sourceLine" id="cb6-39" title="39">          Link(Attr(a.Rel_(<span class="st">&quot;stylesheet&quot;</span>), a.Href_(<span class="st">&quot;/static/css/main.min.css&quot;</span>)))),</a>
+<a class="sourceLine" id="cb6-40" title="40">        Body_(</a>
+<a class="sourceLine" id="cb6-41" title="41">          content,</a>
+<a class="sourceLine" id="cb6-42" title="42">          Script(Attr(a.Src_(<span class="st">&quot;/static/js/main.min.js&quot;</span>)), JS{})))</a>
+<a class="sourceLine" id="cb6-43" title="43"></a>
+<a class="sourceLine" id="cb6-44" title="44">    <span class="kw">return</span> p</a>
+<a class="sourceLine" id="cb6-45" title="45">}</a>
+<a class="sourceLine" id="cb6-46" title="46"></a>
+<a class="sourceLine" id="cb6-47" title="47"><span class="kw">func</span> navbar(isLoggedIn <span class="dt">bool</span>) HTML {</a>
+<a class="sourceLine" id="cb6-48" title="48">  <span class="kw">var</span> navItems HTML</a>
+<a class="sourceLine" id="cb6-49" title="49">  <span class="kw">if</span> !isLoggedIn {</a>
+<a class="sourceLine" id="cb6-50" title="50">    navItems = A(Attr(a.Href_(<span class="st">&quot;/login&quot;</span>)), Text_(<span class="st">&quot;Login&quot;</span>))</a>
+<a class="sourceLine" id="cb6-51" title="51">  }</a>
+<a class="sourceLine" id="cb6-52" title="52"></a>
+<a class="sourceLine" id="cb6-53" title="53">  nav := </a>
+<a class="sourceLine" id="cb6-54" title="54">    Nav_(</a>
+<a class="sourceLine" id="cb6-55" title="55">      Div_(navItems),</a>
+<a class="sourceLine" id="cb6-56" title="56">      Hr_())</a>
+<a class="sourceLine" id="cb6-57" title="57"></a>
+<a class="sourceLine" id="cb6-58" title="58">  <span class="kw">return</span> nav</a>
+<a class="sourceLine" id="cb6-59" title="59">}</a>
+<a class="sourceLine" id="cb6-60" title="60"></a>
+<a class="sourceLine" id="cb6-61" title="61"><span class="kw">func</span> footer() HTML {</a>
+<a class="sourceLine" id="cb6-62" title="62">  <span class="kw">return</span> Footer_(</a>
+<a class="sourceLine" id="cb6-63" title="63">    Hr_(),</a>
+<a class="sourceLine" id="cb6-64" title="64">    Text_(<span class="st">&quot;&amp;copy Acme Ltd, 2019&quot;</span>))</a>
+<a class="sourceLine" id="cb6-65" title="65">}</a></code></pre></div>
 <p>As of now, <code>htmlgo</code> is safe to use as it is based on <code>html/template</code>’s contextual escaping. It supports for all HTML5 tags and attributes. However, at this point it is not optimised for performance and will likely be significantly slower than <code>html/template</code>.</p>
 <p>Feel free to play around with <code>htmlgo</code> and raise issues on <a href="https://github.com/julvo/htmlgo">Github</a>.</p>
     </section>

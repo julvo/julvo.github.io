@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>Using Deep Learning to isolate vocals from songs - julvo.com</title>
+        <link rel="apple-touch-icon-precomposed" sizes="57x57" href="/favicon/apple-touch-icon-57x57.png" />
+        <link rel="apple-touch-icon-precomposed" sizes="114x114" href="/favicon/apple-touch-icon-114x114.png" />
+        <link rel="apple-touch-icon-precomposed" sizes="72x72" href="/favicon/apple-touch-icon-72x72.png" />
+        <link rel="apple-touch-icon-precomposed" sizes="144x144" href="/favicon/apple-touch-icon-144x144.png" />
+        <link rel="apple-touch-icon-precomposed" sizes="60x60" href="/favicon/apple-touch-icon-60x60.png" />
+        <link rel="apple-touch-icon-precomposed" sizes="120x120" href="/favicon/apple-touch-icon-120x120.png" />
+        <link rel="apple-touch-icon-precomposed" sizes="76x76" href="/favicon/apple-touch-icon-76x76.png" />
+        <link rel="apple-touch-icon-precomposed" sizes="152x152" href="/favicon/apple-touch-icon-152x152.png" />
+        <link rel="icon" type="image/png" href="/favicon/favicon-196x196.png" sizes="196x196" />
+        <link rel="icon" type="image/png" href="/favicon/favicon-96x96.png" sizes="96x96" />
+        <link rel="icon" type="image/png" href="/favicon/favicon-32x32.png" sizes="32x32" />
+        <link rel="icon" type="image/png" href="/favicon/favicon-16x16.png" sizes="16x16" />
+        <link rel="icon" type="image/png" href="/favicon/favicon-128.png" sizes="128x128" />
+        <meta name="application-name" content="julvo.com"/>
+        <meta name="msapplication-TileColor" content="#FFFFFF" />
+        <meta name="msapplication-TileImage" content="/favicon/mstile-144x144.png" />
+        <meta name="msapplication-square70x70logo" content="/favicon/mstile-70x70.png" />
+        <meta name="msapplication-square150x150logo" content="/favicon/mstile-150x150.png" />
+        <meta name="msapplication-wide310x150logo" content="/favicon/mstile-310x150.png" />
+        <meta name="msapplication-square310x310logo" content="/favicon/mstile-310x310.png" />
+
+        <link href="https://unpkg.com/tailwindcss@^1.0/dist/tailwind.min.css" rel="stylesheet">
+        <link rel="stylesheet" href="/css/styles.css">
+        <link href="https://fonts.googleapis.com/css?family=Inter:400,700&display=swap" rel="stylesheet">
+        <link rel="preconnect" href="https://fonts.gstatic.com"> 
+        <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+        <script defer src="https://use.fontawesome.com/releases/v5.3.1/js/all.js"></script>
+        <style>
+            body, html {
+                font-family: 'Inter', Arial, Helvetica, sans-serif;
+                color: #222;
+            }
+            p {
+                margin: .6rem 0;
+            }
+            ul {
+                list-style: disc outside;
+                padding-left: 2rem;
+                padding-top: .2rem;
+                padding-bottom: .2rem;
+            }
+
+            li {
+                padding: .2rem 0;
+
+            }
+            h1, h2, h3, h4, h5, h6 {
+                font-weight: bold;
+                font-family: 'DM Mono', monospace;
+                padding-top: 1.2rem;
+                padding-bottom: .2rem;
+            }
+            h1 {
+                font-size: 200%;
+                line-height: 1.2;
+            }
+            h2 {
+                font-size: 180%;
+                line-height: 1.25;
+            }
+            h3 {
+                font-size: 150%;
+                line-height: 1.3;
+            }
+            h4 {
+                font-size: 130%;
+                line-height: 1.35;
+            }
+            h5 {
+                font-size: 120%;
+                line-height: 1.4;
+            }
+            h6 {
+                font-size: 110%;
+                line-height: 1.5;
+            }
+            audio {
+                margin: .6rem 0;
+
+            }
+            pre {
+                padding: 6px;
+                font-size: .82rem;
+                margin-top: .4rem;
+                margin-bottom: .4rem;
+                line-height: 1.35;
+                border-left: 4px solid #ff79c6;
+            }
+        </style>
+    </head>
+    <body>
+        
+<nav class="h-12 w-full bg-transparent border-b-2 border-dashed border-transparent">
+    <div class="relative container py-2 px-2 mx-auto flex flex-row">
+        <a href="/" class="h-8 px-2 flex-grow-0 flex-shrink-0">
+            <img class="h-8" src="/img/julvo.svg" />
+        </a>
+        <div class="w-full flex-grow">
+        </div>
+        <a class="mr-2 h-full hover:text-pink-500 flex-grow-0 flex-shrink-0" href="https://github.com/julvo" target="_blank">
+            <i class="fab fa-github fa-2x h-full"></i>
+        </a>
+    </div>
+</nav>
+
+        <main class="container mx-auto">
+            <div class="inline-block mt-20 mb-8">
+                <h1 class="inline">Using Deep Learning to isolate vocals from songs</h1>
+                
+            </div>
+            <p>Splitting audio tracks into individual audio sources, such as vocals or instruments, is also known as source separation.<br>
+This problem has been approached with Deep Learning by first transforming the audio signal from the time domain into the frequency domain, applying a 2D convolutional network to mask the frequencies and, finally, transforming the masked frequencies back into the time domain.</p>
+<p>If you are now wondering what time domain and frequency domain are, here is a short explanation: In the time domain, an audio signal is a one-dimensional vector, where each element corresponds to the amplitude of the signal at a given time. Typical audio signals are sampled at around 44 thousand samples per second. You can think of the amplitude of an audio signal as the displacement of a speaker membrane playing the sound. We can transform this time series of samples into the frequency domain, by chopping the series into small batches and determining for each of the batches, sine waves of which frequencies we would need to overlay to obtain the same pattern. A signal in the frequency domain is represented as a 2D frequency-over-time matrix. Each element of this matrix determines, how much of a sine wave of this frequency is in the signal at a given time step. For a more mathematical description, have a look at <a href="https://en.wikipedia.org/wiki/Fourier_transform">Fourier transforms</a>.</p>
+<h2>Processing Raw Audio</h2>
+<p>Starting with the introduction of <a href="https://arxiv.org/pdf/1609.03499.pdf">WaveNet</a>, the trend in speech generation seems to be to generate raw audio, i.e. a time domain signal. Therefore, I was wondering if we could approach source separation similarly, by simply feeding a 1D time series of samples into a model and train it to output the 1D series of samples for the vocal signal.</p>
+<p>The challenge, when working with raw audio, is the vast number of samples per second. The signal of a short drum hit of 0.5 seconds spans across 22 thousand samples in a 44.1KHz audio signal. Therefore, a model identifying this entire drum hit would ideally be able to combine the information from 22 thousand input samples. This is a large context to consider for a neural network. The spacial extend of inputs (e.g. the number of samples) used to generate an output, is also called receptive field. WaveNet uses <strong>dilated convolutions</strong> to increase the receptive field, while preserving the spacial resolution. Strided convolution (typical for classification) uses dense kernel matrices, but skips convolutions to increase the receptive field, resulting in decreased spacial resolution. Dilated convolutions, on the other hand, use larger but sparse kernel matrices to increase the receptive field while preserving the spacial resolution. The difference is shown in these animation borrowed from <a href="https://github.com/vdumoulin">vdumoulin</a>:</p>
+<div class="flex flex-row">
+<div class="w-1/2">
+<img src="stride.gif" style="width: 60%; margin-left: 20%;"/>
+<p style="text-align: center">Strided convolution</p>
+</div>
+<div class="w-1/2">
+<img src="dilation.gif" style="width: 60%; margin-left: 20%;"/>
+<p style="text-align: center">Dilated convolution</p>
+</div>
+</div>
+<p>Apart from the repeated blocks of layers of dilated convolutions, key features of the WaveNet architecture include:</p>
+<ul>
+<li><strong>Skip connections</strong> and <strong>residual connections</strong>, to allow direct information and gradient flow between the output and early layers in the network</li>
+<li><strong>Gated activations</strong>: Single layers with single activations are replaced by two parallel layers, one with a <em>tanh</em> activation and the other with a <em>sigmoid</em>. The output of both activations is multiplied to obtain the final activation. My intuitive explanation of the motivation behind this is to factorise a layer into a <em>tanh</em> layer which learns what a feature's impact would be if it had any impact and a <em>sigmoid</em> layer which learns if a feature has an impact, without learning what the impact would be. Similar to LSTMs or GRUs, the <em>sigmoid</em> layer effectively helpts to protect the information in the <em>tanh</em> layer.</li>
+<li><strong>Causal convolutions</strong>: Normal convolutional kernels are symmetric meaning the output of a kernel is computed from inputs to all sides of the output. In causal convolutions, the kernels are masked such that the output depends only on inputs on one side of it. This way, WaveNet can generate new samples from past samples, without peeking into the future.</li>
+</ul>
+<p>For the source separation model, we use 3 blocks of 10 convolutional layers each, with dilation rates of [1, 2, 4, ..., 512]. We use residual connections, skip connections and gated activations. However, we don't need causal convolutions, as the complete source signal is given before the model evaluation and we would like the model to be able to exploit context to both sides of the output. The model output is the sum of outputs of all the skip layers subject to a final convolutional layer to obtain the 2 output channels needed for stereo audio. We use a linear activation in the final layer as this should result in better gradients when combined with the MAE loss between the target vocal signal and the model output. Here is the implementation of the model in Keras:</p>
+<pre style="color:#f8f8f2;background-color:#282a36"><span style="color:#ff79c6">from</span> keras.models <span style="color:#ff79c6">import</span> Model
+<span style="color:#ff79c6">from</span> keras.layers <span style="color:#ff79c6">import</span> Input, Conv1D, Activation, Add, Multiply
+
+<span style="color:#ff79c6">def</span> <span style="color:#50fa7b">VocNet</span>(nb_filters<span style="color:#ff79c6">=</span><span style="color:#bd93f9">128</span>, nb_skip_filters<span style="color:#ff79c6">=</span><span style="color:#bd93f9">192</span>, 
+           nb_layers<span style="color:#ff79c6">=</span><span style="color:#bd93f9">30</span>, nb_layers_per_stage<span style="color:#ff79c6">=</span><span style="color:#bd93f9">10</span>):
+    inputs <span style="color:#ff79c6">=</span> Input((None, <span style="color:#bd93f9">2</span>))
+    h <span style="color:#ff79c6">=</span> Conv1D(nb_filters, <span style="color:#bd93f9">1</span>, activation<span style="color:#ff79c6">=</span><span style="color:#f1fa8c"></span><span style="color:#f1fa8c">&#39;</span><span style="color:#f1fa8c">relu</span><span style="color:#f1fa8c">&#39;</span>, padding<span style="color:#ff79c6">=</span><span style="color:#f1fa8c"></span><span style="color:#f1fa8c">&#39;</span><span style="color:#f1fa8c">same</span><span style="color:#f1fa8c">&#39;</span>)(inputs)
+    
+    skips <span style="color:#ff79c6">=</span> []
+    <span style="color:#ff79c6">for</span> lay <span style="color:#ff79c6">in</span> <span style="color:#8be9fd;font-style:italic">range</span>(nb_layers):
+        dil_rate <span style="color:#ff79c6">=</span> <span style="color:#bd93f9">2</span> <span style="color:#ff79c6">*</span><span style="color:#ff79c6">*</span> (lay <span style="color:#ff79c6">%</span> nb_layers_per_stage)
+
+        tanh <span style="color:#ff79c6">=</span> Conv1D(nb_filters, <span style="color:#bd93f9">2</span>, dilation_rate<span style="color:#ff79c6">=</span>dil_rate, 
+                      activation<span style="color:#ff79c6">=</span><span style="color:#f1fa8c"></span><span style="color:#f1fa8c">&#39;</span><span style="color:#f1fa8c">tanh</span><span style="color:#f1fa8c">&#39;</span>, padding<span style="color:#ff79c6">=</span><span style="color:#f1fa8c"></span><span style="color:#f1fa8c">&#39;</span><span style="color:#f1fa8c">same</span><span style="color:#f1fa8c">&#39;</span>)(h)
+        sigm <span style="color:#ff79c6">=</span> Conv1D(nb_filters, <span style="color:#bd93f9">2</span>, dilation_rate<span style="color:#ff79c6">=</span>dil_rate, 
+                      activation<span style="color:#ff79c6">=</span><span style="color:#f1fa8c"></span><span style="color:#f1fa8c">&#39;</span><span style="color:#f1fa8c">sigmoid</span><span style="color:#f1fa8c">&#39;</span>, padding<span style="color:#ff79c6">=</span><span style="color:#f1fa8c"></span><span style="color:#f1fa8c">&#39;</span><span style="color:#f1fa8c">same</span><span style="color:#f1fa8c">&#39;</span>)(h)
+
+        gated <span style="color:#ff79c6">=</span> Multiply()([tanh, sigm])
+        
+        residual <span style="color:#ff79c6">=</span> Conv1D(nb_filters, <span style="color:#bd93f9">1</span>, activation<span style="color:#ff79c6">=</span><span style="color:#f1fa8c"></span><span style="color:#f1fa8c">&#39;</span><span style="color:#f1fa8c">relu</span><span style="color:#f1fa8c">&#39;</span>, padding<span style="color:#ff79c6">=</span><span style="color:#f1fa8c"></span><span style="color:#f1fa8c">&#39;</span><span style="color:#f1fa8c">same</span><span style="color:#f1fa8c">&#39;</span>)(gated)
+        h <span style="color:#ff79c6">=</span> Add()([h, residual])
+
+        skip <span style="color:#ff79c6">=</span> Conv1D(nb_skip_filters, <span style="color:#bd93f9">1</span>, activation<span style="color:#ff79c6">=</span><span style="color:#f1fa8c"></span><span style="color:#f1fa8c">&#39;</span><span style="color:#f1fa8c">relu</span><span style="color:#f1fa8c">&#39;</span>, padding<span style="color:#ff79c6">=</span><span style="color:#f1fa8c"></span><span style="color:#f1fa8c">&#39;</span><span style="color:#f1fa8c">same</span><span style="color:#f1fa8c">&#39;</span>)(gated)
+        skips<span style="color:#ff79c6">.</span>append(skip)
+        
+    out <span style="color:#ff79c6">=</span> Add()(skips)
+    out <span style="color:#ff79c6">=</span> Conv1D(<span style="color:#bd93f9">2</span>, <span style="color:#bd93f9">1</span>, activation<span style="color:#ff79c6">=</span><span style="color:#f1fa8c"></span><span style="color:#f1fa8c">&#39;</span><span style="color:#f1fa8c">linear</span><span style="color:#f1fa8c">&#39;</span>, padding<span style="color:#ff79c6">=</span><span style="color:#f1fa8c"></span><span style="color:#f1fa8c">&#39;</span><span style="color:#f1fa8c">same</span><span style="color:#f1fa8c">&#39;</span>)(out)
+    
+    <span style="color:#ff79c6">return</span> Model(inputs<span style="color:#ff79c6">=</span>[inputs], outputs<span style="color:#ff79c6">=</span>[out])
+</pre><p>The training data is gathered by downloading instrumental music and acapellas from YouTube. We can generate arbitrarily many training examples by overlaying random snippets of instrumentals and acapellas. Note that we do not require the instrumentals and vocals to stem from the same song, which makes creating a large data set much easier.</p>
+<h2>Results</h2>
+<p>Here are a few model outputs for songs where neither the acapella nor the instrumental was part of the training set. For each of the examples, the first audio file is the original song and the second file is the model output.</p>
+<h4>Adele - Skyfall</h4>
+<div>
+<audio controls>
+  <source src="skyfall.mp3" type="audio/mpeg"/>
+</audio>
+</div>
+<div>
+<audio controls>
+  <source src="skyfall_acapella.mp3" type="audio/mpeg"/>
+</audio>
+</div>
+<h4>Portugal. The Man - Feel It Still</h4>
+<div>
+<audio controls>
+  <source src="feel_it_still.mp3" type="audio/mpeg"/>
+</audio>
+</div>
+<div>
+<audio controls>
+  <source src="feel_it_still_acapella.mp3" type="audio/mpeg"/>
+</audio>
+</div>
+<h4>Pharrell Williams - Happy</h4>
+<div>
+<audio controls>
+  <source src="happy.mp3" type="audio/mpeg"/>
+</audio>
+</div>
+<div>
+<audio controls>
+  <source src="happy_acapella.mp3" type="audio/mpeg"/>
+</audio>
+</div>
+<h4>Red Hot Chili Peppers - Otherside</h4>
+<div>
+<audio controls>
+  <source src="otherside.mp3" type="audio/mpeg"/>
+</audio>
+</div>
+<div>
+<audio controls>
+  <source src="otherside_acapella.mp3" type="audio/mpeg"/>
+</audio>
+</div>
+<p>The results are clearly not good enough to be practically useful. However, these results also show that performing source separation on raw audio signals is viable. Interestingly, the kind of error that the model makes, sounds qualitatively different from the kind of error that seems typical for source separation in the frequency domain. Often, the output of frequency-domain models has a flanger-like sound to it. Therefore, it could be interesting to combine both approaches.</p>
+<h2>Potential for improvement: more context, perceptual loss</h2>
+<p>I suspect there are two main potentials for improving this raw audio approach to source separation:</p>
+<ul>
+<li>
+<p>The receptive field of the above model is 3 x 512 = 1536 samples or 0.035s at a sample rate of 44.1KHz. This feels like quite little information for telling apart vocals from instrumentals. For increasing the context, we could use a model with more layers and higher dilation rates or introduce a form of global context. The global context could be a compact vector representation of the whole song. The source separation network would then be conditioned on this global representation.</p>
+</li>
+<li>
+<p>In this example, we used the MAE loss function. I imagine that an output with a low MAE to the target waveform is not necessarily an output which sounds good to us. E.g. if we imagine a wave being offset by a constant distance over time, it might sound better to us then a wave wiggling around the target with the same distance, even though the MAE would be the same. Therefore, a GAN architecture with a perceptual loss using a discriminator network, might yield much better results.</p>
+</li>
+</ul>
+<br>
+        </main>
+    </body>
+</html>

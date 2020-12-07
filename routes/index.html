@@ -1,0 +1,121 @@
+---
+template: default.html
+title: Home
+---
+
+{{define "body"}}
+
+<section class="flex flex-row items-start">
+    <img src="/img/strokes.svg" class="w-16 pt-12" alt="" />
+    <div>
+        <h1 class="text-xl font-bold p-4 pt-12 w-4/5">
+            Welcome to Julian's little site about programming, machine learning and other interesting things.
+        </h1>
+        <form>
+            <button class="px-4 py-2 border-4 border-black m-4 hover:bg-pink-500 hover:text-white">
+                Contact
+            </button>
+        </form>
+    </div>
+    <img src="/img/leaf.svg" class="w-1/4" style="margin-right: -1rem;" alt="" />
+</section>
+
+<section class="pt-2">
+    <ul class="flex flex-row flex-wrap">
+        {{range .Routes | filterFilePath "**/posts/*/index.md" | limit 1 }}
+        <li class="w-full md:w-2/4 lg:w-{{with .Meta.width}}{{.}}{{else}}1{{end}}/5 p-4">
+            <a href="{{.Href}}" class="inline-block w-full p-2 border-dashed border-4 border-transparent hover:border-black cursor-pointer transition ease-in-ou duration-100 ease-in-out">
+                {{with .Meta.img}} 
+                <img src="{{.}}" class="w-max-full bg-gray-200" alt="" />
+                {{end}}
+                <div class="pt-4 font-bold text-gray-800 text-lg">
+                    {{.Meta.title}}
+                </div>
+                <div>
+                    {{range .Meta.tags}}
+                    <span class="inline-block text-xs mb-1 mr-2">
+                        #{{.}}
+                    </span>
+                    {{end}}
+                </div>
+            </a>
+        </li>
+        {{end}}
+
+        <li class="w-full md:w-2/4 lg:w-1/5 p-8">
+            <img src="/img/pyramid.svg" class="w-max-full" alt="" />
+        </li>
+
+        {{range .Routes | filterFilePath "**/posts/*/index.md" | offset 1 | limit 1 }}
+        <li class="w-full md:w-2/4 lg:w-{{with .Meta.width}}{{.}}{{else}}1{{end}}/5 p-4">
+            <a href="{{.Href}}" class="inline-block w-full p-2 border-dashed border-4 border-transparent hover:border-black cursor-pointer transition ease-in-ou duration-100 ease-in-out">
+                {{with .Meta.img}} 
+                <img src="{{.}}" class="w-max-full bg-gray-200" alt="" />
+                {{end}}
+                <div class="pt-4 font-bold text-gray-800 text-lg">
+                    {{.Meta.title}}
+                </div>
+                <div>
+                    {{range .Meta.tags}}
+                    <span class="inline-block bg-teal-300 text-white text-xs px-3 py-1 mb-1 mr-1">
+                        {{.}}
+                    </span>
+                    {{end}}
+                </div>
+            </a>
+        </li>
+        {{end}}
+
+        <li class="w-full md:w-2/4 lg:w-1/5 p-12">
+            <img src="/img/cylinder.svg" class="w-max-full" alt="" />
+        </li>
+
+        {{range .Routes | filterFilePath "**/posts/*/index.md" | offset 2 }}
+        <li class="w-full md:w-2/4 lg:w-{{with .Meta.width}}{{.}}{{else}}1{{end}}/5 p-4">
+            <a href="{{.Href}}" class="inline-block w-full p-2 border-dashed border-4 border-transparent hover:border-black cursor-pointer transition ease-in-ou duration-100 ease-in-out">
+                {{with .Meta.img}} 
+                <img src="{{.}}" class="w-max-full bg-gray-200" alt="" />
+                {{end}}
+                <div class="pt-4 font-bold text-gray-800 text-lg">
+                    {{.Meta.title}}
+                </div>
+                <div>
+                    {{range .Meta.tags}}
+                    <span class="inline-block text-xs px-3 py-1 mb-1 mr-1">
+                        #{{.}}
+                    </span>
+                    {{end}}
+                </div>
+            </a>
+        </li>
+        {{end}}
+
+       <!-- Deploying a background worker with Github Actions
+        Deploying Node/Express apps with Vercel's now.sh
+        Deploying SPAs with Firebase
+
+        <li>Deploy SPA, API, static page with Firebase and Cloud Run</li>
+        <li>Weekend Project: GPT app name generator</li>
+        <li>github.com/julvo/htmlgo</li>
+        <li>Weekend Project: A Neural Image Editor</li>
+        <li>Weekend Project: A vocabulary-learning app for advanced speakers</li>
+    </ul>
+
+    <h2 class="title-font font-bold text-gray-400 text-4xl lg:text-6xl p-4 mt-16">
+        Paper TLDRs
+    </h2>
+
+    <ul class="block">
+        <li class="flex flex-row p-4">
+            <img src="/img/julvo_sm.png" class="w-32" />
+            <h3 class="ml-8 font-bold title-font">
+                Some Paper Pupu
+            </h3>
+        </li>
+
+    </ul>-->
+
+</section>
+
+
+{{end}}
